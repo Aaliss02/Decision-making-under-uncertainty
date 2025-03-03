@@ -10,6 +10,7 @@ problemData = get_fixed_data()
 nb_exp = 5
 Expers = np.arange(nb_exp)
 sim_T = range(1, problemData['num_timeslots'] + 1)
+nb_scen = 3
 
 wind_trajectory = [[0 for i in range(problemData['num_timeslots'])] for i in range(nb_exp)]
 for e in range(nb_exp):
@@ -48,8 +49,8 @@ for e in Expers :
             previous_and_current_wind = [5, wind_trajectory[e][0]]
             previous_and_current_price = [30, price_trajectory[e][0]]
         else :
-            y[(e, tau)] = y[(e, tau - 1)] + on[(e, tau - 1)] - off[(e, tau - 1)]
-            s[(e, tau)] = s[(e, tau - 1)] - h[(e, tau - 1)] + problemData['conversion_p2h'] * eelzr[(e, tau - 1)]
+            y[(e, tau)] = value(y[(e, tau - 1)] + on[(e, tau - 1)] - off[(e, tau - 1)])
+            s[(e, tau)] = value(s[(e, tau - 1)] - h[(e, tau - 1)] + problemData['conversion_p2h'] * eelzr[(e, tau - 1)])
             previous_and_current_wind = [wind_trajectory[e][tau - 2], wind_trajectory[e][tau - 1]]
             previous_and_current_price = [price_trajectory[e][tau - 2], price_trajectory[e][tau - 1]]
         (
@@ -58,7 +59,7 @@ for e in Expers :
             h[(e, tau)],
             on[(e, tau)],
             off[(e, tau)],
-        ) = make_decision_two_stage(3, previous_and_current_price, previous_and_current_wind, current_and_next_demand, y[(e, tau)], s[(e, tau)])
+        ) = make_decision_two_stage(nb_scen, previous_and_current_price, previous_and_current_wind, current_and_next_demand, y[(e, tau)], s[(e, tau)])
 
         policy_cost[e][tau - 1] = value(price_trajectory[e][tau - 1] * egrid[(e, tau)] + problemData['electrolyzer_cost'] * y[(e, tau)])
 

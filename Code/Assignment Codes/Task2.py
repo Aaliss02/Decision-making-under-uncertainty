@@ -2,6 +2,7 @@ from data import get_fixed_data
 from WindProcess import wind_model
 from PriceProcess import price_model
 from Task0 import optimize
+from Task2_2 import clustering
 import matplotlib.pyplot as plt
 import numpy as np
 from pyomo.environ import *
@@ -30,6 +31,7 @@ def make_decision_two_stage(N, previous_and_current_price, previous_and_current_
     
     prob = 1/N
 
+    print("clust", clustering(previous_and_current_wind[1], previous_and_current_wind[0], problemData))
     next_wind = [wind_model(previous_and_current_wind[1], previous_and_current_wind[0], problemData) for s in range(N)]
     next_price = [price_model(previous_and_current_price[1], previous_and_current_price[0], next_wind[s], problemData) for s in range(N)]
 
@@ -46,10 +48,10 @@ def make_decision_two_stage(N, previous_and_current_price, previous_and_current_
 # Constraints
 
     #Constraint on demand
-    model.Demand1 = Constraint(expr=model.egrid1 + problemData['conversion_h2p'] * model.h1 + previous_and_current_wind[1] - model.eelzr1 >= current_and_next_demand[0])
+    model.Demand1 = Constraint(expr=model.egrid1 + (problemData['conversion_h2p'] * model.h1) + previous_and_current_wind[1] - model.eelzr1 >= current_and_next_demand[0])
     model.Demand2 = ConstraintList()
     for s in model.S:
-        model.Demand2.add(model.egrid2[s] + problemData['conversion_h2p'] * model.h2[s] + next_wind[s] - model.eelzr2[s] >= current_and_next_demand[1])
+        model.Demand2.add(model.egrid2[s] + (problemData['conversion_h2p'] * model.h2[s]) + next_wind[s] - model.eelzr2[s] >= current_and_next_demand[1])
 
     #Constraint on hydrogen conversion
     model.HydrogenConversion1 = Constraint(expr=model.h1 * problemData['conversion_h2p'] <= problemData['h2p_rate'])
@@ -67,6 +69,16 @@ def make_decision_two_stage(N, previous_and_current_price, previous_and_current_
     model.OnAndOff2 = ConstraintList()
     for s in model.S:
         model.OnAndOff2.add(model.on2[s] + model.off2[s] <= 1)
+
+    model.On1 = Constraint(expr=y1 + model.on1 <= 1)
+    model.On2 = ConstraintList()
+    for s in model.S:
+        model.On2.add(model.y2[s] + model.on2[s] <= 1)
+
+    model.Off1 = Constraint(expr=model.off1 <= y1)
+    model.Off2 = ConstraintList()
+    for s in model.S:
+        model.Off2.add(model.off2[s] <= model.y2[s])
 
     def elzr_relation(model, s):
         return model.y2[s] == y1 + model.on1 - model.off1  

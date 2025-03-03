@@ -50,6 +50,14 @@ def optimize(wind_trajectory, price_trajectory):
     for t in model.T:
         model.OnAndOff.add(model.onT[t] + model.offT[t] <= 1)
 
+    model.On = ConstraintList()
+    for t in model.T:
+        model.On.add(model.yT[t] + model.onT[t] <= 1)
+
+    model.Off = ConstraintList()
+    for t in model.T:
+        model.Off.add(model.offT[t] <= model.yT[t])
+
     def elzr_relation(model, t):
         if t > 0:
             return model.yT[t] == model.yT[t-1] + model.onT[t-1] - model.offT[t-1]
@@ -92,6 +100,7 @@ def optimize(wind_trajectory, price_trajectory):
             print(f"  eelzrT[{t}]: {value(model.eelzrT[t]):.3f}")
             print(f"  wind[{t}]: {wind_trajectory[t]:.3f}")
             print(f"  demand[{t}]: {problemData['demand_schedule'][t]:.3f}")
+            print(f"cost : {price_trajectory[t]*value(model.egridT[t]) + problemData['electrolyzer_cost']* value(model.yT[t])}")
         print(f"\nObjective value: {value(model.cost):.3f}\n")
 
         res = {

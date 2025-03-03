@@ -15,12 +15,16 @@ data = get_fixed_data()
 
 initial_state = {'hydrogen': 0, 'electrolyzer_status': 0}
 
-wind_trajectory = [data['target_mean_wind'] for i in range(data['num_timeslots'])]
+wind_trajectory = [0 for i in range(data['num_timeslots'])]
+wind_trajectory[0] = wind_model(5,4,data)
+wind_trajectory[1] = wind_model(wind_trajectory[0], 5, data)
 
 for i in range(1, data['num_timeslots'] - 1):
     wind_trajectory[i+1] = wind_model(wind_trajectory[i], wind_trajectory[i-1], data)
 
-price_trajectory = [data['mean_price'] for i in range(data['num_timeslots'])]
+price_trajectory = [0 for i in range(data['num_timeslots'])]
+price_trajectory[0] = price_model(30,28,wind_trajectory[0], data)
+price_trajectory[1] = price_model(price_trajectory[0], 30, wind_trajectory[1], data)
 
 for i in range(1, data['num_timeslots'] - 1):
     price_trajectory[i+1] = price_model(price_trajectory[i], price_trajectory[i-1], wind_trajectory[i+1], data)
