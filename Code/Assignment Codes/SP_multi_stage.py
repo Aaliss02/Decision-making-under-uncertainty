@@ -6,6 +6,7 @@ from Clustering import clustering
 import matplotlib.pyplot as plt
 import numpy as np
 from pyomo.environ import *
+from Non_anticipativity import Non_anticipativity
 
 def make_decision_multi_stage(nb_branches, nb_scen, lookahead, previous_and_current_price, previous_and_current_wind, current_and_next_demand, y1, s1):
 
@@ -85,23 +86,32 @@ def make_decision_multi_stage(nb_branches, nb_scen, lookahead, previous_and_curr
             model.Off.add(model.off[s,t] <= model.y,t[s,t])
 
     def elzr_relation(model, s):
-        return model.y2[s] == y1 + model.on1 - model.off1  
+        return model.y[s, t+1] == model.y[s,t] + model.on[s,t] - model.off[s,t] 
     model.ElectrolyzerStat = Constraint(model.S, rule=elzr_relation)
 
-    model.ElectrolyzerConsumption1 = Constraint(expr=model.eelzr1 <= previous_and_current_wind[1])
-    model.ElectrolyzerConsumption2 = ConstraintList()
+    model.ElectrolyzerConsumption = ConstraintList()
     for s in model.S:
-        model.ElectrolyzerConsumption2.add(model.eelzr2[s] <= next_wind[s])
+        for t in model.T:
+            model.ElectrolyzerConsumption.add(model.eelzr[s,t] <= next_wind[s,t])
 
     #Constraints on storage
-    model.CurrentStorage1 = Constraint(expr=model.h1 <= s1)
-    model.CurrentStorage2 = ConstraintList()
+    model.CurrentStorage = ConstraintList()
     for s in model.S:
-        model.CurrentStorage2.add(model.h2[s] <= model.s2[s])
+        for t in model.T:
+            model.CurrentStorage.add(model.h[s,t] <= model.s[s,t])
 
     def storage_relation(model, s):
-        return model.s2[s] == s1 - model.h1 + problemData['conversion_p2h'] * model.eelzr1
+        return model.s[s, t+1] == s[s,t] - model.h[s,t] + problemData['conversion_p2h'] * model.eelzr[s,t]
     model.storage_constraint = Constraint(model.S, rule=storage_relation)
+
+    #Non-Anticipativity constraints:
+    S = Non_anticipativity()
+
+    model.NonAn = ConstraintList()
+    for s in model.S:
+        for t in model.T:
+            for s_prime in S.get((s,t), set()): #please nathan check we love u
+                model.NonAn.add(model.h[s,t] == model.h[s_prime,t])
 
 
     # Create a solver
@@ -110,7 +120,4 @@ def make_decision_multi_stage(nb_branches, nb_scen, lookahead, previous_and_curr
     # Solve the model
     solver.solve(model, tee=True)
     
-    #Non-Anticipativity constraints:
-    
-
-    return model.egrid1, model.eelzr1, model.h1, model.on1, model.off1
+    return model.egrid, model.eelzr, model.h, model.on, model.off
