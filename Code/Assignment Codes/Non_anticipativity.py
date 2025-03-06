@@ -11,5 +11,5 @@ def Non_anticipativity(Scenarios, L, wind, price):
                     if wind[s][t-u] != wind[s_prime][t-u] or price[s][t-u] != price[s_prime][t-u]:
                         belongs = False
                 if belongs: 
-                    S[s, t].add(s_prime)
+                    S[s, t].add(s_prime, s, t)
     return S  
