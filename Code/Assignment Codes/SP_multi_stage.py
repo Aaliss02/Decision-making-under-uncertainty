@@ -26,7 +26,7 @@ def make_decision_multi_stage(nb_branches, nb_scen, lookahead, previous_and_curr
     
     wind = [[previous_and_current_wind[1] for _ in range(lookahead)] for _ in range(nb_scen)]
     price = [[previous_and_current_price[1] for _ in range(lookahead)] for _ in range(nb_scen)]
-    prob = [[1 for _ in range(lookahead)] for _ in range(nb_scen)]
+    prob = [1 for _ in range(nb_scen)]
 
     for t in range(lookahead - 1):
         clusters = []
@@ -54,15 +54,12 @@ def make_decision_multi_stage(nb_branches, nb_scen, lookahead, previous_and_curr
 
             wind[s][t+1] = clusters[cluster_index][branch_index][0]
             price[s][t+1] = clusters[cluster_index][branch_index][1] 
-            prob[s][t+1] = proba[cluster_index][branch_index] 
-
-    next_wind = [wind_model(previous_and_current_wind[1], previous_and_current_wind[0], problemData) for s in range(nb_scen)]
-    next_price = [price_model(previous_and_current_price[1], previous_and_current_price[0], next_wind[s], problemData) for s in range(nb_scen)]
+            prob[s] = prob[s]*proba[cluster_index][branch_index]
 
     # Objective function: Minimization of cost
     model.cost = Objective(
         expr=sum(
-            prob[s][t] * (price[s][t] * model.egrid[s, t] + problemData['electrolyzer_cost'] * model.y[s, t])
+            prob[s] * (price[s][t] * model.egrid[s, t] + problemData['electrolyzer_cost'] * model.y[s, t])
             for s in model.S for t in model.T
         ),
         sense=minimize
@@ -70,11 +67,20 @@ def make_decision_multi_stage(nb_branches, nb_scen, lookahead, previous_and_curr
 
 # Constraints
 
+    # Initial constraints for all scenarios
+    model.InitialStorage = ConstraintList()
+    for s in model.S:
+        model.InitialStorage.add(model.s[s, 0] == s1)
+
+    model.InitialElectrolyzerState = ConstraintList()
+    for s in model.S:
+        model.InitialElectrolyzerState.add(model.y[s, 0] == y1)
+
     #Constraint on demand
     model.Demand = ConstraintList()
     for s in model.S:
         for t in model.T:
-            model.Demand.add(model.egrid[s, t] + (problemData['conversion_h2p'] * model.h[s,t]) + wind[s][t] - model.eelzr[s,t] >= demand[s][t])
+            model.Demand.add(model.egrid[s, t] + (problemData['conversion_h2p'] * model.h[s,t]) + wind[s][t] - model.eelzr[s,t] >= demand[t])
 
     #Constraint on hydrogen conversion
     model.HydrogenConversion = ConstraintList()
@@ -141,11 +147,10 @@ def make_decision_multi_stage(nb_branches, nb_scen, lookahead, previous_and_curr
                 model.NonAn.add(model.eelzr[s, t] == model.eelzr[s_prime, t])
                 model.NonAn.add(model.h[s, t] == model.h[s_prime, t])
 
-
     # Create a solver
     solver = SolverFactory('gurobi')  # Make sure Gurobi is installed and properly configured
 
     # Solve the model
-    solver.solve(model, tee=True)
-    
+    solver.solve(model, tee=False)
+
     return model.egrid[0, 0], model.eelzr[0, 0], model.h[0, 0], model.on[0, 0], model.off[0, 0]

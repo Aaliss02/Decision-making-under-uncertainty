@@ -5,15 +5,16 @@ from PriceProcess import price_model
 from Task2 import make_decision_two_stage
 from SP_multi_stage import make_decision_multi_stage
 from pyomo.environ import value
+from Task0 import optimize
 
 problemData = get_fixed_data()
 
 nb_exp = 5
 Expers = np.arange(nb_exp)
 sim_T = range(1, problemData['num_timeslots'] + 1)
-nb_scen = 27
+nb_scen = 8
 lookahead = 4
-nb_branches = 3
+nb_branches = 2
 
 wind_trajectory = [[0 for _ in range(problemData['num_timeslots'])] for _ in range(nb_exp)]
 for e in range(nb_exp):
@@ -41,8 +42,9 @@ policy_cost_at_experiment = np.full(nb_exp, 99999999)
 
 for e in Expers:
     for tau in sim_T:
-        demand = [[problemData['demand_schedule'][min(tau - 1 + t, problemData['num_timeslots'] - 1)]
-                   for t in range(lookahead)] for _ in range(nb_scen)]
+        lookahead = min(lookahead, problemData['num_timeslots'] - tau + 1)
+
+        demand = [problemData['demand_schedule'][tau - 1 + t] for t in range(lookahead)]
 
         if tau == 1:
             y[(e, tau)] = 0

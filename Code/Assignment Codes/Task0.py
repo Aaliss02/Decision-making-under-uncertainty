@@ -83,7 +83,7 @@ def optimize(wind_trajectory, price_trajectory):
     solver = SolverFactory('gurobi')  # Assicurati che Gurobi sia installato
 
     # Solve the model
-    results = solver.solve(model, tee=True)
+    results = solver.solve(model, tee=False)
 
     # Check if an optimal solution was found
     if results.solver.termination_condition == TerminationCondition.optimal:
