@@ -10,6 +10,7 @@ from pyomo.environ import *
 def make_decision_two_stage(N, previous_and_current_price, previous_and_current_wind, current_and_next_demand, y1, s1):
 
     problemData = get_fixed_data()
+    n_cluster = 41
 
     #create model
     model = ConcreteModel()
@@ -31,7 +32,7 @@ def make_decision_two_stage(N, previous_and_current_price, previous_and_current_
     
     prob = 1/N
 
-    print("clust", clustering(previous_and_current_wind[1], previous_and_current_wind[0], previous_and_current_price[1], previous_and_current_price[0], problemData))
+    print("clust", clustering(n_cluster, previous_and_current_wind[1], previous_and_current_wind[0], previous_and_current_price[1], previous_and_current_price[0], problemData))
     next_wind = [wind_model(previous_and_current_wind[1], previous_and_current_wind[0], problemData) for s in range(N)]
     next_price = [price_model(previous_and_current_price[1], previous_and_current_price[0], next_wind[s], problemData) for s in range(N)]
 
