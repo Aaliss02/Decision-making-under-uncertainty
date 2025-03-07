@@ -1,14 +1,11 @@
 from data import get_fixed_data
 from WindProcess import wind_model
 from PriceProcess import price_model
-from Task0 import optimize
 from Clustering import clustering
-import matplotlib.pyplot as plt
-import numpy as np
 from pyomo.environ import *
 from Non_anticipativity import Non_anticipativity
 
-def make_decision_multi_stage(nb_branches, nb_scen, lookahead, previous_and_current_price, previous_and_current_wind, current_and_next_demand, y1, s1):
+def make_decision_multi_stage(nb_branches, nb_scen, lookahead, previous_and_current_price, previous_and_current_wind, demand, y1, s1):
 
     problemData = get_fixed_data()
 
@@ -26,37 +23,64 @@ def make_decision_multi_stage(nb_branches, nb_scen, lookahead, previous_and_curr
     model.egrid = Var(model.S, model.T, within=NonNegativeReals)
     model.eelzr = Var(model.S, model.T, bounds=(0, problemData['p2h_rate']/problemData['conversion_p2h']))
     model.h = Var(model.S, model.T, bounds=(0, problemData['h2p_rate']/problemData['conversion_h2p']))
-
+    
     wind = [[previous_and_current_wind[1] for _ in range(lookahead)] for _ in range(nb_scen)]
     price = [[previous_and_current_price[1] for _ in range(lookahead)] for _ in range(nb_scen)]
-    prob = [[1 for _ in range(lookahead)] for _ in range(nb_scen)]
-    scen = [[[previous_and_current_wind[1],previous_and_current_price[1], 1] for _ in range(lookahead)] for _ in range(nb_scen)]
-    for t in range(1,lookahead):
-        for s in range(nb_scen):
-            if t == 1:
-                scen[s][t] = 
+    prob = [1 for _ in range(nb_scen)]
 
-    print("clust", clustering(nb_branches, previous_and_current_wind[1], previous_and_current_wind[0], previous_and_current_price[1], previous_and_current_price[0], problemData))
-    next_wind = [wind_model(previous_and_current_wind[1], previous_and_current_wind[0], problemData) for s in range(nb_scen)]
-    next_price = [price_model(previous_and_current_price[1], previous_and_current_price[0], next_wind[s], problemData) for s in range(nb_scen)]
+    for t in range(lookahead - 1):
+        clusters = []
+        proba = []
+        nb_clustering = nb_branches**t
+        group_size = nb_scen // nb_clustering
+
+        for i in range(nb_clustering):
+            if t == 0:
+                c, p = clustering(
+                    nb_branches, previous_and_current_wind[1], previous_and_current_wind[0], 
+                    previous_and_current_price[1], previous_and_current_price[0], problemData
+                )
+            else:
+                c, p = clustering(
+                    nb_branches, wind[i * group_size][t], wind[i * group_size][t - 1], 
+                    price[i * group_size][t], price[i * group_size][t - 1], problemData
+                )
+            clusters.append(c)
+            proba.append(p)
+
+        for s in range(nb_scen):
+            cluster_index = s // group_size
+            branch_index = (s % group_size) // (group_size // nb_branches) 
+
+            wind[s][t+1] = clusters[cluster_index][branch_index][0]
+            price[s][t+1] = clusters[cluster_index][branch_index][1] 
+            prob[s] = prob[s]*proba[cluster_index][branch_index]
 
     # Objective function: Minimization of cost
     model.cost = Objective(
-        expr= (previous_and_current_price[1] * model.egrid1) + problemData['electrolyzer_cost'] * y1 + 
-        prob * sum(
-            next_price[s] * model.egrid2[s] + problemData['electrolyzer_cost'] * model.y2[s]
-            for s in model.S
+        expr=sum(
+            prob[s] * (price[s][t] * model.egrid[s, t] + problemData['electrolyzer_cost'] * model.y[s, t])
+            for s in model.S for t in model.T
         ),
         sense=minimize
     )
 
 # Constraints
 
+    # Initial constraints for all scenarios
+    model.InitialStorage = ConstraintList()
+    for s in model.S:
+        model.InitialStorage.add(model.s[s, 0] == s1)
+
+    model.InitialElectrolyzerState = ConstraintList()
+    for s in model.S:
+        model.InitialElectrolyzerState.add(model.y[s, 0] == y1)
+
     #Constraint on demand
     model.Demand = ConstraintList()
     for s in model.S:
         for t in model.T:
-            model.Demand.add(model.egrid[s, t] + (problemData['conversion_h2p'] * model.h[s,t]) + wind[s,t] - model.eelzr2[s,t] >= demand[s,t])
+            model.Demand.add(model.egrid[s, t] + (problemData['conversion_h2p'] * model.h[s,t]) + wind[s][t] - model.eelzr[s,t] >= demand[t])
 
     #Constraint on hydrogen conversion
     model.HydrogenConversion = ConstraintList()
@@ -78,21 +102,24 @@ def make_decision_multi_stage(nb_branches, nb_scen, lookahead, previous_and_curr
     model.On = ConstraintList()
     for s in model.S:
         for t in model.T:
-            model.On2.add(model.y[s,t] + model.on[s,t] <= 1)
+            model.On.add(model.y[s,t] + model.on[s,t] <= 1)
 
     model.Off = ConstraintList()
     for s in model.S:
         for t in model.T:
-            model.Off.add(model.off[s,t] <= model.y,t[s,t])
+            model.Off.add(model.off[s,t] <= model.y[s,t])
 
-    def elzr_relation(model, s):
-        return model.y[s, t+1] == model.y[s,t] + model.on[s,t] - model.off[s,t] 
-    model.ElectrolyzerStat = Constraint(model.S, rule=elzr_relation)
+    model.ElectrolyzerStat = ConstraintList()
+    for s in model.S:
+        for t in range(lookahead - 1):
+            model.ElectrolyzerStat.add(
+                model.y[s, t+1] == model.y[s, t] + model.on[s, t] - model.off[s, t]
+            )
 
     model.ElectrolyzerConsumption = ConstraintList()
     for s in model.S:
         for t in model.T:
-            model.ElectrolyzerConsumption.add(model.eelzr[s,t] <= next_wind[s,t])
+            model.ElectrolyzerConsumption.add(model.eelzr[s, t] <= wind[s][t])
 
     #Constraints on storage
     model.CurrentStorage = ConstraintList()
@@ -100,24 +127,30 @@ def make_decision_multi_stage(nb_branches, nb_scen, lookahead, previous_and_curr
         for t in model.T:
             model.CurrentStorage.add(model.h[s,t] <= model.s[s,t])
 
-    def storage_relation(model, s):
-        return model.s[s, t+1] == s[s,t] - model.h[s,t] + problemData['conversion_p2h'] * model.eelzr[s,t]
-    model.storage_constraint = Constraint(model.S, rule=storage_relation)
+    model.storage_constraint = ConstraintList()
+    for s in model.S:
+        for t in range(lookahead - 1):
+            model.storage_constraint.add(
+                model.s[s, t+1] == model.s[s, t] - model.h[s, t] + problemData['conversion_p2h'] * model.eelzr[s, t]
+            )
 
     #Non-Anticipativity constraints:
-    S = Non_anticipativity()
+    S = Non_anticipativity(nb_scen,lookahead,wind,price)
 
     model.NonAn = ConstraintList()
     for s in model.S:
         for t in model.T:
             for s_prime in S.get((s,t), set()): #please nathan check we love u
-                model.NonAn.add(model.h[s,t] == model.h[s_prime,t])
-
+                model.NonAn.add(model.on[s, t] == model.on[s_prime, t])
+                model.NonAn.add(model.off[s, t] == model.off[s_prime, t]) 
+                model.NonAn.add(model.egrid[s, t] == model.egrid[s_prime, t])
+                model.NonAn.add(model.eelzr[s, t] == model.eelzr[s_prime, t])
+                model.NonAn.add(model.h[s, t] == model.h[s_prime, t])
 
     # Create a solver
     solver = SolverFactory('gurobi')  # Make sure Gurobi is installed and properly configured
 
     # Solve the model
-    solver.solve(model, tee=True)
-    
-    return model.egrid, model.eelzr, model.h, model.on, model.off
+    solver.solve(model, tee=False)
+
+    return model.egrid[0, 0], model.eelzr[0, 0], model.h[0, 0], model.on[0, 0], model.off[0, 0]
