@@ -83,14 +83,14 @@ def optimize(wind_trajectory, price_trajectory):
     solver = SolverFactory('gurobi')  # Assicurati che Gurobi sia installato
 
     # Solve the model
-    results = solver.solve(model, tee=True)
+    results = solver.solve(model, tee=False)
 
     # Check if an optimal solution was found
     if results.solver.termination_condition == TerminationCondition.optimal:
         print(" Optimal solution found")
 
         # Print out variable values and objective value
-        print("Variable values:")
+        '''print("Variable values:")
         for t in model.T:
             print(f"Time period {t}:")
             print(f"  yT[{t}]: {value(model.yT[t]):.3f}")
@@ -100,7 +100,7 @@ def optimize(wind_trajectory, price_trajectory):
             print(f"  eelzrT[{t}]: {value(model.eelzrT[t]):.3f}")
             print(f"  wind[{t}]: {wind_trajectory[t]:.3f}")
             print(f"  demand[{t}]: {problemData['demand_schedule'][t]:.3f}")
-            print(f"cost : {price_trajectory[t]*value(model.egridT[t]) + problemData['electrolyzer_cost']* value(model.yT[t])}")
+            print(f"cost : {price_trajectory[t]*value(model.egridT[t]) + problemData['electrolyzer_cost']* value(model.yT[t])}")'''
         print(f"\nObjective value: {value(model.cost):.3f}\n")
 
         res = {
