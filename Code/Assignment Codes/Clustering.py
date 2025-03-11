@@ -8,9 +8,6 @@ def clustering(n_clusters, current_wind, previous_wind, current_price, previous_
     np.random.seed(42)
     n_simulations = 1000  # Number of Monte Carlo samples
 
-    # Generate wind scenarios (1D array)
-    scenarios = np.zeros(n_simulations)
-
     wind = [wind_model(current_wind, previous_wind, problemData) for i in range(n_simulations)]
     price = [price_model(current_price, previous_price, wind[i], problemData) for i in range(n_simulations)]
     data = list(zip(wind,price))
@@ -26,6 +23,3 @@ def clustering(n_clusters, current_wind, previous_wind, current_price, previous_
         prob[i] = prob[i]/n_simulations
     
     return centers, prob
-
-
-

@@ -6,6 +6,7 @@ from Task2 import make_decision_two_stage
 from SP_multi_stage import make_decision_multi_stage
 from pyomo.environ import value
 from Task0 import optimize
+from dummy_policy import make_dummy_decision
 
 problemData = get_fixed_data()
 
