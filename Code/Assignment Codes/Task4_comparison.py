@@ -10,12 +10,12 @@ import matplotlib.pyplot as plt
 
 problemData = get_fixed_data()
 
-nb_exp = 5
+nb_exp = 20
 Expers = np.arange(nb_exp)
 sim_T = range(1, problemData['num_timeslots'] + 1)
-nb_scen = 27
+nb_scen = 64
 lookahead = 4
-nb_branches = 3
+nb_branches = 4
 
 wind_trajectory = [[0 for _ in range(problemData['num_timeslots'])] for _ in range(nb_exp)]
 for e in range(nb_exp):
@@ -76,8 +76,8 @@ for e in Expers:
             previous_and_current_wind = [5, wind_trajectory[e][0]]
             previous_and_current_price = [30, price_trajectory[e][0]]
         else:
-            y_dummy[(e, tau)] = value(y_dummy[(e, tau - 1)] + on_dummy[(e, tau - 1)] - off_dummy[(e, tau - 1)])
-            s_dummy[(e, tau)] = value(s_dummy[(e, tau - 1)] - h_dummy[(e, tau - 1)] + problemData['conversion_p2h'] * eelzr_dummy[(e, tau - 1)])
+            y_dummy[(e, tau)] = y_dummy[(e, tau - 1)] + on_dummy[(e, tau - 1)] - off_dummy[(e, tau - 1)]
+            s_dummy[(e, tau)] = s_dummy[(e, tau - 1)] - h_dummy[(e, tau - 1)] + problemData['conversion_p2h'] * eelzr_dummy[(e, tau - 1)]
             y_multi_stage[(e, tau)] = value(y_multi_stage[(e, tau - 1)] + on_multi_stage[(e, tau - 1)] - off_multi_stage[(e, tau - 1)])
             s_multi_stage[(e, tau)] = value(s_multi_stage[(e, tau - 1)] - h_multi_stage[(e, tau - 1)] + problemData['conversion_p2h'] * eelzr_multi_stage[(e, tau - 1)])
             y_expected_value[(e, tau)] = value(y_expected_value[(e, tau - 1)] + on_expected_value[(e, tau - 1)] - off_expected_value[(e, tau - 1)])
@@ -91,7 +91,7 @@ for e in Expers:
             h_dummy[(e, tau)],
             on_dummy[(e, tau)],
             off_dummy[(e, tau)],
-        ) = make_dummy_decision(previous_and_current_wind[1], demand[0])
+        ) = make_dummy_decision(demand[0], previous_and_current_wind[1])
 
         (
             egrid_multi_stage[(e, tau)],
@@ -109,7 +109,7 @@ for e in Expers:
             off_expected_value[(e, tau)],
         ) = make_decision_multi_stage(1, 1, lookahead, previous_and_current_price, previous_and_current_wind, demand, y_expected_value[(e, tau)], s_expected_value[(e, tau)])
 
-        policy_cost_dummy[e][tau - 1] = value(price_trajectory[e][tau - 1] * egrid_dummy[(e, tau)] + problemData['electrolyzer_cost'] * y_dummy[(e, tau)])
+        policy_cost_dummy[e][tau - 1] = price_trajectory[e][tau - 1] * egrid_dummy[(e, tau)] + problemData['electrolyzer_cost'] * y_dummy[(e, tau)]
         policy_cost_multi_stage[e][tau - 1] = value(price_trajectory[e][tau - 1] * egrid_multi_stage[(e, tau)] + problemData['electrolyzer_cost'] * y_multi_stage[(e, tau)])
         policy_cost_expected_value[e][tau - 1] = value(price_trajectory[e][tau - 1] * egrid_expected_value[(e, tau)] + problemData['electrolyzer_cost'] * y_expected_value[(e, tau)])
 
