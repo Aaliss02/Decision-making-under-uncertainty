@@ -87,7 +87,7 @@ def optimize(wind_trajectory, price_trajectory):
 
     # Check if an optimal solution was found
     if results.solver.termination_condition == TerminationCondition.optimal:
-        print(" Optimal solution found")
+        #print(" Optimal solution found")
 
         # Print out variable values and objective value
         '''print("Variable values:")
@@ -101,14 +101,15 @@ def optimize(wind_trajectory, price_trajectory):
             print(f"  wind[{t}]: {wind_trajectory[t]:.3f}")
             print(f"  demand[{t}]: {problemData['demand_schedule'][t]:.3f}")
             print(f"cost : {price_trajectory[t]*value(model.egridT[t]) + problemData['electrolyzer_cost']* value(model.yT[t])}")'''
-        print(f"\nObjective value: {value(model.cost):.3f}\n")
+        #print(f"\nObjective value: {value(model.cost):.3f}\n")
 
         res = {
             'electrolyzer_status': [value(model.yT[t]) for t in model.T],
             'hydrogen_storage_level': [value(model.sT[t]) for t in model.T],
             'power_to_hydrogen': [value(model.eelzrT[t]) for t in model.T],
             'hydrogen_to_power': [value(model.hT[t]) for t in model.T],
-            'grid_power': [value(model.egridT[t]) for t in model.T]
+            'grid_power': [value(model.egridT[t]) for t in model.T],
+            'cost': value(model.cost)
         }
 
         return res  # 

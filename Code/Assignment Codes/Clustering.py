@@ -4,9 +4,7 @@ import numpy as np
 from sklearn.cluster import KMeans
 
 def clustering(n_clusters, current_wind, previous_wind, current_price, previous_price, problemData):
-    # Monte Carlo simulation
-    np.random.seed(42)
-    n_simulations = 1000  # Number of Monte Carlo samples
+    n_simulations = 1000  
 
     wind = [wind_model(current_wind, previous_wind, problemData) for i in range(n_simulations)]
     price = [price_model(current_price, previous_price, wind[i], problemData) for i in range(n_simulations)]

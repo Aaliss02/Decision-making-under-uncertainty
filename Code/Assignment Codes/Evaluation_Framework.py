@@ -2,7 +2,7 @@ import numpy as np
 from data import get_fixed_data
 from WindProcess import wind_model
 from PriceProcess import price_model
-from Task2 import make_decision_two_stage
+from SP_2_stage import make_decision_two_stage
 from SP_multi_stage import make_decision_multi_stage
 from pyomo.environ import value
 from Task0 import optimize
