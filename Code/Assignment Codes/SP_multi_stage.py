@@ -153,4 +153,4 @@ def make_decision_multi_stage(nb_branches, nb_scen, lookahead, previous_and_curr
     # Solve the model
     solver.solve(model, tee=False)
 
-    return model.egrid[0, 0], model.eelzr[0, 0], model.h[0, 0], model.on[0, 0], model.off[0, 0]
+    return value(model.egrid[0, 0]), value(model.eelzr[0, 0]), value(model.h[0, 0]), value(model.on[0, 0]), value(model.off[0, 0])
