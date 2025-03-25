@@ -11,7 +11,7 @@ from dummy_policy import make_dummy_decision
 problemData = get_fixed_data()
 
 nb_exp = 5
-Expers = np.arange(nb_exp)
+nb_timeslots = problemData['num_timeslots']
 sim_T = range(1, problemData['num_timeslots'] + 1)
 nb_scen = 8
 lookahead = 4
@@ -31,44 +31,42 @@ for e in range(nb_exp):
     for i in range(1, problemData['num_timeslots'] - 1):
         price_trajectory[e][i+1] = price_model(price_trajectory[e][i], price_trajectory[e][i-1], wind_trajectory[e][i+1], problemData)
 
-y = {}
-egrid = {}
-eelzr = {}
-h = {}
-on = {}
-off = {}
-s = {}
-policy_cost = np.full((nb_exp, problemData['num_timeslots']), 99999999)
-policy_cost_at_experiment = np.full(nb_exp, 99999999)
+y = np.zeros((nb_exp, problemData['num_timeslots']+1))
+egrid = np.zeros((nb_exp, problemData['num_timeslots']+1))
+eelzr = np.zeros((nb_exp, problemData['num_timeslots']+1))
+h = np.zeros((nb_exp, problemData['num_timeslots']+1))
+on = np.zeros((nb_exp, problemData['num_timeslots']+1))
+off = np.zeros((nb_exp, problemData['num_timeslots']+1))
+s = np.zeros((nb_exp, problemData['num_timeslots']+1))
+policy_cost = np.zeros((nb_exp, problemData['num_timeslots']))
+policy_cost_at_experiment = np.zeros(nb_exp)
 
-for e in Expers:
-    for tau in sim_T:
-        lookahead = min(lookahead, problemData['num_timeslots'] - tau + 1)
-
-        demand = [problemData['demand_schedule'][tau - 1 + t] for t in range(lookahead)]
+for e in range(nb_exp):
+    for tau in range(1, nb_timeslots+1):
+        current_lookahead = min(lookahead, nb_timeslots - tau + 1)
+        demand = problemData['demand_schedule'][tau-1:tau+current_lookahead-1]
 
         if tau == 1:
-            y[(e, tau)] = 0
-            s[(e, tau)] = 0
             previous_and_current_wind = [5, wind_trajectory[e][0]]
             previous_and_current_price = [30, price_trajectory[e][0]]
         else:
-            y[(e, tau)] = value(y[(e, tau - 1)] + on[(e, tau - 1)] - off[(e, tau - 1)])
-            s[(e, tau)] = value(s[(e, tau - 1)] - h[(e, tau - 1)] + problemData['conversion_p2h'] * eelzr[(e, tau - 1)])
+            y[e][tau] = y[e][tau-1] + on[e][tau-1] - off[e][tau-1]
+            s[e][tau] = s[e][tau-1] - h[e][tau-1] + problemData['conversion_p2h'] * eelzr[e][tau-1]
             previous_and_current_wind = [wind_trajectory[e][tau - 2], wind_trajectory[e][tau - 1]]
             previous_and_current_price = [price_trajectory[e][tau - 2], price_trajectory[e][tau - 1]]
 
         (
-            egrid[(e, tau)],
-            eelzr[(e, tau)],
-            h[(e, tau)],
-            on[(e, tau)],
-            off[(e, tau)],
-        ) = make_decision_multi_stage(nb_branches, nb_scen, lookahead, previous_and_current_price, previous_and_current_wind, demand, y[(e, tau)], s[(e, tau)])
+            egrid[e][tau],
+            eelzr[e][tau],
+            h[e][tau],
+            on[e][tau],
+            off[e][tau],
+        ) = make_decision_multi_stage(nb_branches, nb_scen, current_lookahead, previous_and_current_price, previous_and_current_wind, demand, y[e][tau], s[e][tau])
 
-        policy_cost[e][tau - 1] = value(price_trajectory[e][tau - 1] * egrid[(e, tau)] + problemData['electrolyzer_cost'] * y[(e, tau)])
+        policy_cost[e, tau - 1] = price_trajectory[e][tau - 1] * egrid[e][tau] + problemData['electrolyzer_cost'] * y[e][tau]
 
-    policy_cost_at_experiment[e] = sum(policy_cost[e, tau - 1] for tau in sim_T)
+    policy_cost_at_experiment[e] = np.sum(policy_cost[e])
+    print(f"Experiment {e} completed")
 
-FINAL_POLICY_COST = sum(policy_cost_at_experiment[e] for e in Expers) / nb_exp
+FINAL_POLICY_COST = np.mean(policy_cost_at_experiment)
 print("THE FINAL POLICY EXPECTED COST IS", FINAL_POLICY_COST)
