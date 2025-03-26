@@ -62,33 +62,32 @@ def compute_target_value(state, exo_future_samples, value_fn_next, problem_data,
     return max(0, immediate_cost + gamma * expected_future)
 
 #I picked out random values of I and K to see if it ran
-if __name__ == "__main__":
-    problem_data = get_fixed_data()
-    T = 24  
-    I = 20  
-    K = 3  
-    gamma = 0.9
+problem_data = get_fixed_data()
+T = 24  
+I = 20  
+K = 3  
+gamma = 0.9
 
-    theta_by_t = {}
-    value_fn_next = LinearValueFunction(theta=np.zeros(4))  
+theta_by_t = {}
+value_fn_next = LinearValueFunction(theta=np.zeros(4))  
 
-#main loop
-    for t in reversed(range(T)):
-        states_t = sample_representative_states(I, problem_data)
-        targets = []
+#main loop, didn't define it as a function yet
+for t in reversed(range(T)):
+    states_t = sample_representative_states(I, problem_data)
+    targets = []
 
-        for state in states_t:
-            lam_t, wind_t, *_ = state
-            exo_samples = sample_exogenous_next_states(lam_t, wind_t, K, problem_data)
-            V_target = compute_target_value(state, exo_samples, value_fn_next, problem_data, gamma)
-            targets.append(V_target)
+    for state in states_t:
+        lam_t, wind_t, *_ = state
+        exo_samples = sample_exogenous_next_states(lam_t, wind_t, K, problem_data)
+        V_target = compute_target_value(state, exo_samples, value_fn_next, problem_data, gamma)
+        targets.append(V_target)
 
-        value_fn_t = train_linear_value_function(states_t, targets)
-        theta_by_t[t] = value_fn_t.theta
-        value_fn_next = value_fn_t
+    value_fn_t = train_linear_value_function(states_t, targets)
+    theta_by_t[t] = value_fn_t.theta
+    value_fn_next = value_fn_t
 
-        avg_value = np.mean(targets)
-        print(f"  t = {t}: mean V_target = {avg_value:.2f}")
+    avg_value = np.mean(targets)
+    print(f"  t = {t}: mean V_target = {avg_value:.2f}")
 #to see what values where drawn
 #should we have a correlation between pt egrid and lambda?
 print(f"t = {t} | λ values: {[round(s[0], 2) for s in states_t]}")
