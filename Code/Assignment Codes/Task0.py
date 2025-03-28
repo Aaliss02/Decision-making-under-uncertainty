@@ -80,8 +80,8 @@ def optimize(wind_trajectory, price_trajectory):
     model.initial_storage = Constraint(expr=model.sT[0] == 0)
 
     # Create a solver
-    solver = SolverFactory('gurobi')  # Assicurati che Gurobi sia installato
-
+    solver = SolverFactory('gurobi')  
+    
     # Solve the model
     results = solver.solve(model, tee=False)
 
