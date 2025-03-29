@@ -33,7 +33,7 @@ def sample_representative_states(I, problem_data):
         y = np.random.choice([0, 1])
         s = np.random.uniform(0, problem_data['hydrogen_capacity'])
         egrid = np.random.uniform(0, 10)
-        states.append((lam, wind, y, s, egrid))  #why are we considering egrid as state variable and not a decision varibale?"
+        states.append((lam, wind, y, s, egrid))
     return states
 
 #sampling K exougenous states

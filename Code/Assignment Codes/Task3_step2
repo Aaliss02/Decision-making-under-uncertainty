@@ -4,6 +4,10 @@ from data import get_fixed_data
 from PriceProcess import price_model
 from WindProcess import wind_model
 
+
+#Load theta_by_t from the file
+theta_by_t = np.load('theta_by_t.npy', allow_pickle=True).item()
+
 # Assuming LinearValueFunction is defined as in your second document
 class LinearValueFunction:
     def __init__(self, theta):
@@ -78,7 +82,7 @@ def adp_policy(current_state, tau, theta_by_t, problem_data, S=10, gamma=0.9):
     model.objective = Objective(expr=immediate_cost + future_value, sense=minimize)  #I don't know if how to include the discount factor because doesn't make much sense with minimization of the cost
 
     # Solve the model
-    solver = SolverFactory('gurobi')  # Requires Gurobi; replace with your solver if needed
+    solver = SolverFactory('gurobi')  
     results = solver.solve(model, tee=False)
 
     # Check if an optimal solution was found
