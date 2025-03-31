@@ -4,8 +4,7 @@ from data import get_fixed_data
 from PriceProcess import price_model
 from WindProcess import wind_model
 
-
-#Load theta_by_t from the file
+# Load theta_by_t from the file
 theta_by_t = np.load('theta_by_t.npy', allow_pickle=True).item()
 
 # Assuming LinearValueFunction is defined as in your second document
@@ -28,17 +27,14 @@ def sample_exogenous_next_states(lam_t, wind_t, S, data):
         samples.append((lam_next, wind_next))
     return samples
 
-#Implementation of the ADP policy execution step
+# Implementation of the ADP policy execution step
 def adp_policy(current_state, tau, theta_by_t, problem_data, S=10, gamma=0.9): 
-    
     # Unpack the current state
     lam_t, wind_t, y_t_minus1, s_t_minus1 = current_state
 
     # Sample |S| next exogenous states
     exo_samples = sample_exogenous_next_states(lam_t, wind_t, S, problem_data)
 
-    #Must create a new MILP model code since now is needed just for one period
-    
     # Single-period Pyomo model
     model = ConcreteModel()
 
@@ -66,20 +62,23 @@ def adp_policy(current_state, tau, theta_by_t, problem_data, S=10, gamma=0.9):
     # Immediate cost
     immediate_cost = lam_t * model.egridT + problem_data['electrolyzer_cost'] * model.yT
 
-    # Future value term
+    # Future value term (symbolic)
     future_value = 0
     if tau + 1 in theta_by_t:  # If there’s a next period (tau < T-1)
         theta_next = theta_by_t[tau + 1]
-        value_fn_next = LinearValueFunction(theta=theta_next)
         for lam_next, wind_next in exo_samples:
-            x_next = [lam_next, wind_next, model.yT, model.sT]  # Features for V_{tau+1}
-            v_next = value_fn_next.predict_single(x_next)
+            # Compute V(z_{tau+1}, y_{tau+1}, s_{tau+1}, theta) symbolically
+            # V = theta_0 * lam_next + theta_1 * wind_next + theta_2 * yT + theta_3 * sT
+            v_next = (theta_next[0] * lam_next +
+                      theta_next[1] * wind_next +
+                      theta_next[2] * model.yT +
+                      theta_next[3] * model.sT)
             future_value += v_next
         future_value = (gamma / S) * future_value
     # If tau = T-1, future_value remains 0 (no future cost)
 
     # Objective: Minimize immediate cost + discounted future cost
-    model.objective = Objective(expr=immediate_cost + future_value, sense=minimize)  #I don't know if how to include the discount factor because doesn't make much sense with minimization of the cost
+    model.objective = Objective(expr=immediate_cost + future_value, sense=minimize)
 
     # Solve the model
     solver = SolverFactory('gurobi')  
@@ -97,7 +96,7 @@ def adp_policy(current_state, tau, theta_by_t, problem_data, S=10, gamma=0.9):
             'hydrogen_to_power': value(model.hT),
             'cost': value(immediate_cost)
         }
-        return decisions # Return the decisions as a dictionary for here-and-now
+        return decisions  # Return the decisions as a dictionary for here-and-now
     else:
         print(f"No optimal solution found at tau={tau}. Termination condition: {results.solver.termination_condition}")
         return {}  # Return empty dictionary if no solution

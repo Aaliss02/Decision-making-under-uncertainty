@@ -149,10 +149,10 @@ def main_train_value_function(problem_data, T, I, K, gamma, max_outer_iterations
 if __name__ == "__main__":
     problem_data = get_fixed_data()
     T = 24
-    I = 10  # Increased sample size I put 20 just to try the code and se if it runs without had to wait for long time, I tried also with 500 seems to be a good trade betwen accuracy and time
+    I = 100  # Increased sample size I put 20 just to try the code and se if it runs without had to wait for long time, I tried also with 500 seems to be a good trade betwen accuracy and time
     K = 3   # Increased sample size, I put 5 just to try
     gamma = 0.9
-    max_outer_iterations = 20  #I had the option to do several big loop through T but it just add noise to the theta, so we should keep it to 1
+    max_outer_iterations = 1  #I had the option to do several big loop through T but it just add noise to the theta, so we should keep it to 1
     convergence_threshold = 1e-3
 
     theta_by_t = main_train_value_function(problem_data, T, I, K, gamma, max_outer_iterations, convergence_threshold)
