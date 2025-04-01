@@ -92,3 +92,7 @@ for t in reversed(range(T)):
 #should we have a correlation between pt egrid and lambda?
 print(f"t = {t} | λ values: {[round(s[0], 2) for s in states_t]}")
 print(f"t = {t} | egrid values: {[round(s[4], 2) for s in states_t]}")
+
+# Save theta_by_t to a file
+np.save('theta_by_t.npy', theta_by_t)
+print("Saved theta_by_t to 'theta_by_t.npy'")
