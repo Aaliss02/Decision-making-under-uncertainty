@@ -7,7 +7,7 @@ from WindProcess import wind_model
 # Load theta_by_t from the file
 theta_by_t = np.load('theta_by_t.npy', allow_pickle=True).item()
 
-# Assuming LinearValueFunction is defined as in your second document
+
 class LinearValueFunction:
     def __init__(self, theta):
         self.theta = theta
@@ -20,8 +20,8 @@ class LinearValueFunction:
 def sample_exogenous_next_states(lam_t, wind_t, S, data):
     samples = []
     for _ in range(S):
-        wind_t_minus1 = np.random.uniform(0, 35)  # Same range as in your training code
-        lam_t_minus1 = np.random.uniform(0, 90)   # Same range as in your training code
+        wind_t_minus1 = np.random.uniform(0, 35)  # Same range as in the training code
+        lam_t_minus1 = np.random.uniform(0, 90)   # Same range as in the training code
         wind_next = wind_model(wind_t, wind_t_minus1, data)
         lam_next = price_model(lam_t, lam_t_minus1, wind_next, data)
         samples.append((lam_next, wind_next))
@@ -38,7 +38,7 @@ def adp_policy(current_state, tau, theta_by_t, problem_data, S=10, gamma=0.9):
     # Single-period Pyomo model
     model = ConcreteModel()
 
-    # Define variables for time tau (single period)
+    #  Variables for time tau (single period)
     model.yT = Var(bounds=(0, 1), within=Binary)
     model.onT = Var(bounds=(0, 1), within=Binary)
     model.offT = Var(bounds=(0, 1), within=Binary)
@@ -47,7 +47,7 @@ def adp_policy(current_state, tau, theta_by_t, problem_data, S=10, gamma=0.9):
     model.eelzrT = Var(bounds=(0, problem_data['p2h_rate']/problem_data['conversion_p2h']))
     model.hT = Var(bounds=(0, problem_data['h2p_rate']/problem_data['conversion_h2p']))
 
-    # Constraints based on the MILP for time tau
+    # Constraints 
     model.yT_constraint = Constraint(expr=model.yT == y_t_minus1 + model.onT - model.offT)
     model.sT_constraint = Constraint(expr=model.sT == s_t_minus1 - model.hT + problem_data['conversion_p2h'] * model.eelzrT)
     model.demand_constraint = Constraint(expr=model.egridT + problem_data['conversion_h2p'] * model.hT + wind_t - model.eelzrT >= problem_data['demand_schedule'][tau])
@@ -62,13 +62,12 @@ def adp_policy(current_state, tau, theta_by_t, problem_data, S=10, gamma=0.9):
     # Immediate cost
     immediate_cost = lam_t * model.egridT + problem_data['electrolyzer_cost'] * model.yT
 
-    # Future value term (symbolic)
+    # Future value term 
     future_value = 0
     if tau + 1 in theta_by_t:  # If there’s a next period (tau < T-1)
         theta_next = theta_by_t[tau + 1]
         for lam_next, wind_next in exo_samples:
             # Compute V(z_{tau+1}, y_{tau+1}, s_{tau+1}, theta) symbolically
-            # V = theta_0 * lam_next + theta_1 * wind_next + theta_2 * yT + theta_3 * sT
             v_next = (theta_next[0] * lam_next +
                       theta_next[1] * wind_next +
                       theta_next[2] * model.yT +

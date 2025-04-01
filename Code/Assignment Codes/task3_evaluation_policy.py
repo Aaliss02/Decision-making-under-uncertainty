@@ -64,7 +64,7 @@ for e in range(nb_exp):
             off[e][tau] = 0
             y[e][tau] = y[e][tau - 1]
             s[e][tau] = s[e][tau - 1]
-            policy_cost[e, tau - 1] = 0  # Could assign a penalty cost
+            policy_cost[e, tau - 1] = 0  
 
     policy_cost_at_experiment[e] = np.sum(policy_cost[e])
     print(f"Experiment {e} completed with total cost {policy_cost_at_experiment[e]:.2f}")

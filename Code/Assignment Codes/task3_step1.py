@@ -113,6 +113,7 @@ def main_train_value_function(problem_data, T, I, K, gamma, max_outer_iterations
             targets = []
 
             for state in states_t:
+                #we should add a N loop for each state like in the algorithm, I did not include in my version because was not on the original created "task3"
                 lam_t, wind_t, *_ = state
                 exo_samples = sample_exogenous_next_states(lam_t, wind_t, K, problem_data)
                 V_target = compute_target_value(state, exo_samples, value_fn_next, problem_data, gamma, t)
