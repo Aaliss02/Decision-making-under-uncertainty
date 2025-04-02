@@ -6,13 +6,12 @@ from SP_multi_stage import make_decision_multi_stage
 from Task0 import optimize
 from dummy_policy import make_dummy_decision
 import matplotlib.pyplot as plt
-from task3_test import adp_policy  # Import the ADP policy function
+from task3_policy import adp_policy
 
 problemData = get_fixed_data()
 
 nb_exp = 7
 nb_timeslots = problemData['num_timeslots']
-sim_T = range(1, problemData['num_timeslots'] + 1)
 nb_scen = 32
 lookahead = 6
 nb_branches = 2
@@ -58,15 +57,15 @@ off_expected_value = np.zeros((nb_exp, problemData['num_timeslots']+1))
 s_expected_value = np.zeros((nb_exp, problemData['num_timeslots']+1))
 policy_cost_expected_value = np.zeros((nb_exp, problemData['num_timeslots']))
 policy_cost_at_experiment_expected_value = np.zeros(nb_exp)
-y = np.zeros((nb_exp, nb_timeslots + 1))  # y[e][tau] is status at start of tau
-egrid = np.zeros((nb_exp, nb_timeslots + 1))
-eelzr = np.zeros((nb_exp, nb_timeslots + 1))
-h = np.zeros((nb_exp, nb_timeslots + 1))
-on = np.zeros((nb_exp, nb_timeslots + 1))
-off = np.zeros((nb_exp, nb_timeslots + 1))
-s = np.zeros((nb_exp, nb_timeslots + 1))  # s[e][tau] is storage at start of tau
-policy_cost = np.zeros((nb_exp, nb_timeslots))
-policy_cost_at_experiment = np.zeros(nb_exp)
+y_adp = np.zeros((nb_exp, nb_timeslots + 1))
+egrid_adp = np.zeros((nb_exp, nb_timeslots + 1))
+eelzr_adp = np.zeros((nb_exp, nb_timeslots + 1))
+h_adp = np.zeros((nb_exp, nb_timeslots + 1))
+on_adp = np.zeros((nb_exp, nb_timeslots + 1))
+off_adp = np.zeros((nb_exp, nb_timeslots + 1))
+s_adp = np.zeros((nb_exp, nb_timeslots + 1))
+policy_cost_adp = np.zeros((nb_exp, nb_timeslots))
+policy_cost_at_experiment_adp = np.zeros(nb_exp)
 policy_cost_at_experiment_oih = np.zeros(nb_exp)
 
 for e in range(nb_exp):
@@ -84,12 +83,12 @@ for e in range(nb_exp):
             s_expected_value[e][tau] = s_expected_value[e][tau-1] - h_expected_value[e][tau-1] + problemData['conversion_p2h'] * eelzr_expected_value[e][tau-1]
             y_multi_stage[e][tau] = y_multi_stage[e][tau-1] + on_multi_stage[e][tau-1] - off_multi_stage[e][tau-1]
             s_multi_stage[e][tau] = s_multi_stage[e][tau-1] - h_multi_stage[e][tau-1] + problemData['conversion_p2h'] * eelzr_multi_stage[e][tau-1]
-            y[e][tau] = y[e][tau-1] + on[e][tau-1] - off[e][tau-1]
-            s[e][tau] = s[e][tau-1] - h[e][tau-1] + problemData['conversion_p2h'] * eelzr[e][tau-1]
+            y_adp[e][tau] = y_adp[e][tau-1] + on_adp[e][tau-1] - off_adp[e][tau-1]
+            s_adp[e][tau] = s_adp[e][tau-1] - h_adp[e][tau-1] + problemData['conversion_p2h'] * eelzr_adp[e][tau-1]
             previous_and_current_wind = [wind_trajectory[e][tau - 2], wind_trajectory[e][tau - 1]]
             previous_and_current_price = [price_trajectory[e][tau - 2], price_trajectory[e][tau - 1]]
 
-        current_state = (price_trajectory[e][tau-1], wind_trajectory[e][tau-1], y[e][tau], s[e][tau])
+        current_state = (price_trajectory[e][tau-1], wind_trajectory[e][tau-1], y_adp[e][tau], s_adp[e][tau])
 
         (egrid_dummy[e][tau], eelzr_dummy[e][tau], h_dummy[e][tau], on_dummy[e][tau], 
          off_dummy[e][tau]) = make_dummy_decision(demand[0], previous_and_current_wind[1])
@@ -103,21 +102,21 @@ for e in range(nb_exp):
          off_multi_stage[e][tau]
         ) = make_decision_multi_stage(nb_branches, nb_scen,  current_lookahead, previous_and_current_price, previous_and_current_wind, demand, y_multi_stage[e][tau], s_multi_stage[e][tau])
         
-        res = adp_policy(current_state, tau)
+        res = adp_policy(current_state, tau, 0.9, 50)
 
-        (egrid[e][tau], eelzr[e][tau], h[e][tau], on[e][tau],
-         off[e][tau]) = res
+        (egrid_adp[e][tau], eelzr_adp[e][tau], h_adp[e][tau], on_adp[e][tau],
+         off_adp[e][tau]) = res
         
         policy_cost_dummy[e, tau - 1] = price_trajectory[e][tau-1] * egrid_dummy[e][tau] + problemData['electrolyzer_cost'] * y_dummy[e][tau]
         policy_cost_multi_stage[e, tau - 1] = price_trajectory[e][tau-1] * egrid_multi_stage[e][tau] + problemData['electrolyzer_cost'] * y_multi_stage[e][tau]
         policy_cost_expected_value[e, tau - 1] = price_trajectory[e][tau-1] * egrid_expected_value[e][tau] + problemData['electrolyzer_cost'] * y_expected_value[e][tau]
-        policy_cost[e, tau - 1] = price_trajectory[e][tau-1] * egrid[e][tau] + problemData['electrolyzer_cost'] * y[e][tau]
+        policy_cost_adp[e, tau - 1] = price_trajectory[e][tau-1] * egrid_adp[e][tau] + problemData['electrolyzer_cost'] * y_adp[e][tau]
 
     policy_cost_at_experiment_oih[e] = optimize(wind_trajectory[e], price_trajectory[e])['cost']
     policy_cost_at_experiment_dummy[e] = np.sum(policy_cost_dummy[e])
     policy_cost_at_experiment_multi_stage[e] = np.sum(policy_cost_multi_stage[e])
     policy_cost_at_experiment_expected_value[e] = np.sum(policy_cost_expected_value[e])
-    policy_cost_at_experiment[e] = np.sum(policy_cost[e])
+    policy_cost_at_experiment_adp[e] = np.sum(policy_cost_adp[e])
     print(f"Experiment {e} completed")
 
 FINAL_POLICY_COST_dummy = np.mean(policy_cost_at_experiment_dummy)
@@ -126,17 +125,17 @@ FINAL_POLICY_COST_expected_value =  np.mean(policy_cost_at_experiment_expected_v
 print("THE FINAL EXPECTED VALUE POLICY EXPECTED COST IS", FINAL_POLICY_COST_expected_value)
 FINAL_POLICY_COST_multi_stage =  np.mean(policy_cost_at_experiment_multi_stage)
 print("THE FINAL MULTI STAGE POLICY EXPECTED COST IS", FINAL_POLICY_COST_multi_stage)
+FINAL_POLICY_COST_adp = np.mean(policy_cost_at_experiment_adp)
+print(f"THE FINAL ADP POLICY EXPECTED COST IS {FINAL_POLICY_COST_adp}")
 FINAL_POLICY_COST_oih = np.mean(policy_cost_at_experiment_oih)
-FINAL_POLICY_COST = np.mean(policy_cost_at_experiment)
-print(f"THE FINAL POLICY EXPECTED COST IS {FINAL_POLICY_COST}")
 print("THE FINAL OIH EXPECTED COST IS", FINAL_POLICY_COST_oih)
 
 plt.figure(figsize=(10, 6))
-plt.plot(range(nb_exp), policy_cost_at_experiment_dummy, label="Dummy Policy", marker='o')
-plt.plot(range(nb_exp), policy_cost_at_experiment_multi_stage, label="Multi-Stage", marker='s')
-plt.plot(range(nb_exp), policy_cost_at_experiment_expected_value, label="Expected Value", marker='^')
-plt.plot(range(nb_exp), policy_cost_at_experiment_oih, label="OIH", marker='d')
-plt.plot(range(nb_exp), policy_cost_at_experiment, label="ADP", marker='*')
+plt.plot(range(nb_exp), policy_cost_at_experiment_dummy, label="Dummy Policy")
+plt.plot(range(nb_exp), policy_cost_at_experiment_multi_stage, label="Multi-Stage")
+plt.plot(range(nb_exp), policy_cost_at_experiment_expected_value, label="Expected Value")
+plt.plot(range(nb_exp), policy_cost_at_experiment_oih, label="OIH")
+plt.plot(range(nb_exp), policy_cost_at_experiment_adp, label="ADP")
 
 # Labels and title
 plt.xlabel("Experiment")

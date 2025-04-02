@@ -11,7 +11,6 @@ problemData = get_fixed_data()
 
 nb_exp = 5
 nb_timeslots = problemData['num_timeslots']
-sim_T = range(1, problemData['num_timeslots'] + 1)
 nb_scen = 8
 lookahead = 4
 nb_branches = 2
