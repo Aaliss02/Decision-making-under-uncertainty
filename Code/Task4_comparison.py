@@ -137,12 +137,15 @@ FINAL_POLICY_COST_oih = np.mean(policy_cost_at_experiment_oih)
 print("THE FINAL OIH EXPECTED COST IS", FINAL_POLICY_COST_oih)
 
 plt.figure(figsize=(10, 6))
-plt.plot(range(nb_exp), policy_cost_at_experiment_dummy, label="Dummy Policy")
+
+colors = ['blue', 'green', 'red', 'magenta', 'orange', 'black', 'purple', 'cyan']
+plt.plot(range(nb_exp), policy_cost_at_experiment_dummy, label="Dummy Policy", color=colors[0])
 for i in range(4):
-    plt.plot(range(nb_exp), policy_cost_at_experiment_multi_stage[i], label=f"Multi-Stage {nb_branches[i]}B {lookahead[i]}L")
-plt.plot(range(nb_exp), policy_cost_at_experiment_expected_value, label="Expected Value")
-plt.plot(range(nb_exp), policy_cost_at_experiment_oih, label="OIH")
-plt.plot(range(nb_exp), policy_cost_at_experiment_adp, label="ADP")
+    plt.plot(range(nb_exp), policy_cost_at_experiment_multi_stage[i], 
+             label=f"Multi-Stage {nb_branches[i]}B {lookahead[i]}L", color=colors[i + 1])
+plt.plot(range(nb_exp), policy_cost_at_experiment_expected_value, label="Expected Value", color=colors[5])
+plt.plot(range(nb_exp), policy_cost_at_experiment_oih, label="OIH", color=colors[6])
+plt.plot(range(nb_exp), policy_cost_at_experiment_adp, label="ADP", color=colors[7])
 
 # Labels and title
 plt.xlabel("Experiment")
