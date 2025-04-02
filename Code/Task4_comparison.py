@@ -10,11 +10,11 @@ from task3_policy import adp_policy
 
 problemData = get_fixed_data()
 
-nb_exp = 7
+nb_exp = 20
 nb_timeslots = problemData['num_timeslots']
-nb_scen = 32
-lookahead = 6
-nb_branches = 2
+lookahead = [6, 4, 3, 2]
+nb_branches = [2, 4, 6, 30]
+nb_scen = [32, 64, 36, 30]
 
 wind_trajectory = [[0 for _ in range(problemData['num_timeslots'])] for _ in range(nb_exp)]
 for e in range(nb_exp):
@@ -39,15 +39,15 @@ off_dummy = np.zeros((nb_exp, problemData['num_timeslots']+1))
 s_dummy = np.zeros((nb_exp, problemData['num_timeslots']+1))
 policy_cost_dummy = np.zeros((nb_exp, problemData['num_timeslots']))
 policy_cost_at_experiment_dummy = np.zeros(nb_exp)
-y_multi_stage = np.zeros((nb_exp, problemData['num_timeslots']+1))
-egrid_multi_stage = np.zeros((nb_exp, problemData['num_timeslots']+1))
-eelzr_multi_stage = np.zeros((nb_exp, problemData['num_timeslots']+1))
-h_multi_stage = np.zeros((nb_exp, problemData['num_timeslots']+1))
-on_multi_stage = np.zeros((nb_exp, problemData['num_timeslots']+1))
-off_multi_stage = np.zeros((nb_exp, problemData['num_timeslots']+1))
-s_multi_stage = np.zeros((nb_exp, problemData['num_timeslots']+1))
-policy_cost_multi_stage = np.zeros((nb_exp, problemData['num_timeslots']))
-policy_cost_at_experiment_multi_stage = np.zeros(nb_exp)
+y_multi_stage = [np.zeros((nb_exp, problemData['num_timeslots']+1)) for _ in range(4)]
+egrid_multi_stage = [np.zeros((nb_exp, problemData['num_timeslots']+1)) for _ in range(4)]
+eelzr_multi_stage = [np.zeros((nb_exp, problemData['num_timeslots']+1)) for _ in range(4)]
+h_multi_stage = [np.zeros((nb_exp, problemData['num_timeslots']+1)) for _ in range(4)]
+on_multi_stage = [np.zeros((nb_exp, problemData['num_timeslots']+1)) for _ in range(4)]
+off_multi_stage = [np.zeros((nb_exp, problemData['num_timeslots']+1)) for _ in range(4)]
+s_multi_stage = [np.zeros((nb_exp, problemData['num_timeslots']+1)) for _ in range(4)]
+policy_cost_multi_stage = [np.zeros((nb_exp, problemData['num_timeslots'])) for _ in range(4)]
+policy_cost_at_experiment_multi_stage = [np.zeros(nb_exp) for _ in range(4)]
 y_expected_value = np.zeros((nb_exp, problemData['num_timeslots']+1))
 egrid_expected_value = np.zeros((nb_exp, problemData['num_timeslots']+1))
 eelzr_expected_value = np.zeros((nb_exp, problemData['num_timeslots']+1))
@@ -70,7 +70,7 @@ policy_cost_at_experiment_oih = np.zeros(nb_exp)
 
 for e in range(nb_exp):
     for tau in range(1, nb_timeslots+1):
-        current_lookahead = min(lookahead, nb_timeslots - tau + 1)
+        current_lookahead = min(lookahead[0], nb_timeslots - tau + 1)
         demand = problemData['demand_schedule'][tau-1:tau+current_lookahead-1]
 
         if tau == 1:
@@ -81,8 +81,9 @@ for e in range(nb_exp):
             s_dummy[e][tau] = s_dummy[e][tau-1] - h_dummy[e][tau-1] + problemData['conversion_p2h'] * eelzr_dummy[e][tau-1]
             y_expected_value[e][tau] = y_expected_value[e][tau-1] + on_expected_value[e][tau-1] - off_expected_value[e][tau-1]
             s_expected_value[e][tau] = s_expected_value[e][tau-1] - h_expected_value[e][tau-1] + problemData['conversion_p2h'] * eelzr_expected_value[e][tau-1]
-            y_multi_stage[e][tau] = y_multi_stage[e][tau-1] + on_multi_stage[e][tau-1] - off_multi_stage[e][tau-1]
-            s_multi_stage[e][tau] = s_multi_stage[e][tau-1] - h_multi_stage[e][tau-1] + problemData['conversion_p2h'] * eelzr_multi_stage[e][tau-1]
+            for i in range(4):
+                y_multi_stage[i][e][tau] = y_multi_stage[i][e][tau-1] + on_multi_stage[i][e][tau-1] - off_multi_stage[i][e][tau-1]
+                s_multi_stage[i][e][tau] = s_multi_stage[i][e][tau-1] - h_multi_stage[i][e][tau-1] + problemData['conversion_p2h'] * eelzr_multi_stage[i][e][tau-1]
             y_adp[e][tau] = y_adp[e][tau-1] + on_adp[e][tau-1] - off_adp[e][tau-1]
             s_adp[e][tau] = s_adp[e][tau-1] - h_adp[e][tau-1] + problemData['conversion_p2h'] * eelzr_adp[e][tau-1]
             previous_and_current_wind = [wind_trajectory[e][tau - 2], wind_trajectory[e][tau - 1]]
@@ -98,23 +99,27 @@ for e in range(nb_exp):
             1, 1, current_lookahead, previous_and_current_price, previous_and_current_wind, demand, y_expected_value[e][tau], s_expected_value[e][tau]
         )
 
-        (egrid_multi_stage[e][tau], eelzr_multi_stage[e][tau], h_multi_stage[e][tau], on_multi_stage[e][tau], 
-         off_multi_stage[e][tau]
-        ) = make_decision_multi_stage(nb_branches, nb_scen,  current_lookahead, previous_and_current_price, previous_and_current_wind, demand, y_multi_stage[e][tau], s_multi_stage[e][tau])
-        
-        res = adp_policy(current_state, tau, 0.9, 50)
+        for i in range(4):
+            current_lookahead = min(lookahead[i], nb_timeslots - tau + 1)
+            demand = problemData['demand_schedule'][tau-1:tau+current_lookahead-1]
+            (egrid_multi_stage[i][e][tau], eelzr_multi_stage[i][e][tau], h_multi_stage[i][e][tau], on_multi_stage[i][e][tau],
+             off_multi_stage[i][e][tau]) = make_decision_multi_stage(
+                nb_branches[i], nb_scen[i], current_lookahead, previous_and_current_price, previous_and_current_wind, demand, y_multi_stage[i][e][tau], s_multi_stage[i][e][tau]
+            )
 
         (egrid_adp[e][tau], eelzr_adp[e][tau], h_adp[e][tau], on_adp[e][tau],
-         off_adp[e][tau]) = res
+         off_adp[e][tau]) = adp_policy(current_state, tau, 0.9, 50)
         
         policy_cost_dummy[e, tau - 1] = price_trajectory[e][tau-1] * egrid_dummy[e][tau] + problemData['electrolyzer_cost'] * y_dummy[e][tau]
-        policy_cost_multi_stage[e, tau - 1] = price_trajectory[e][tau-1] * egrid_multi_stage[e][tau] + problemData['electrolyzer_cost'] * y_multi_stage[e][tau]
+        for i in range(4):
+            policy_cost_multi_stage[i][e, tau - 1] = price_trajectory[e][tau-1] * egrid_multi_stage[i][e][tau] + problemData['electrolyzer_cost'] * y_multi_stage[i][e][tau]
         policy_cost_expected_value[e, tau - 1] = price_trajectory[e][tau-1] * egrid_expected_value[e][tau] + problemData['electrolyzer_cost'] * y_expected_value[e][tau]
         policy_cost_adp[e, tau - 1] = price_trajectory[e][tau-1] * egrid_adp[e][tau] + problemData['electrolyzer_cost'] * y_adp[e][tau]
 
     policy_cost_at_experiment_oih[e] = optimize(wind_trajectory[e], price_trajectory[e])['cost']
     policy_cost_at_experiment_dummy[e] = np.sum(policy_cost_dummy[e])
-    policy_cost_at_experiment_multi_stage[e] = np.sum(policy_cost_multi_stage[e])
+    for i in range(4):
+        policy_cost_at_experiment_multi_stage[i][e] = np.sum(policy_cost_multi_stage[i][e])
     policy_cost_at_experiment_expected_value[e] = np.sum(policy_cost_expected_value[e])
     policy_cost_at_experiment_adp[e] = np.sum(policy_cost_adp[e])
     print(f"Experiment {e} completed")
@@ -123,8 +128,9 @@ FINAL_POLICY_COST_dummy = np.mean(policy_cost_at_experiment_dummy)
 print("THE FINAL DUMMY POLICY EXPECTED COST IS", FINAL_POLICY_COST_dummy)
 FINAL_POLICY_COST_expected_value =  np.mean(policy_cost_at_experiment_expected_value)
 print("THE FINAL EXPECTED VALUE POLICY EXPECTED COST IS", FINAL_POLICY_COST_expected_value)
-FINAL_POLICY_COST_multi_stage =  np.mean(policy_cost_at_experiment_multi_stage)
-print("THE FINAL MULTI STAGE POLICY EXPECTED COST IS", FINAL_POLICY_COST_multi_stage)
+for i in range(4):
+    FINAL_POLICY_COST_multi_stage = np.mean(policy_cost_at_experiment_multi_stage[i])
+    print(f"THE FINAL MULTI STAGE POLICY EXPECTED COST FOR {nb_branches[i]} BRANCHES AND A LOOKAHEAD OF {lookahead[i]} IS", FINAL_POLICY_COST_multi_stage)
 FINAL_POLICY_COST_adp = np.mean(policy_cost_at_experiment_adp)
 print(f"THE FINAL ADP POLICY EXPECTED COST IS {FINAL_POLICY_COST_adp}")
 FINAL_POLICY_COST_oih = np.mean(policy_cost_at_experiment_oih)
@@ -132,7 +138,8 @@ print("THE FINAL OIH EXPECTED COST IS", FINAL_POLICY_COST_oih)
 
 plt.figure(figsize=(10, 6))
 plt.plot(range(nb_exp), policy_cost_at_experiment_dummy, label="Dummy Policy")
-plt.plot(range(nb_exp), policy_cost_at_experiment_multi_stage, label="Multi-Stage")
+for i in range(4):
+    plt.plot(range(nb_exp), policy_cost_at_experiment_multi_stage[i], label=f"Multi-Stage {nb_branches[i]}B {lookahead[i]}L")
 plt.plot(range(nb_exp), policy_cost_at_experiment_expected_value, label="Expected Value")
 plt.plot(range(nb_exp), policy_cost_at_experiment_oih, label="OIH")
 plt.plot(range(nb_exp), policy_cost_at_experiment_adp, label="ADP")

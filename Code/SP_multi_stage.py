@@ -132,7 +132,7 @@ def make_decision_multi_stage(nb_branches, nb_scen, lookahead, previous_and_curr
     model.NonAn = ConstraintList()
     for s in model.S:
         for t in model.T:
-            for s_prime in S.get((s,t), set()): #please nathan check we love u
+            for s_prime in S.get((s,t), set()):
                 model.NonAn.add(model.on[s, t] == model.on[s_prime, t])
                 model.NonAn.add(model.off[s, t] == model.off[s_prime, t]) 
                 model.NonAn.add(model.egrid[s, t] == model.egrid[s_prime, t])
@@ -140,7 +140,7 @@ def make_decision_multi_stage(nb_branches, nb_scen, lookahead, previous_and_curr
                 model.NonAn.add(model.h[s, t] == model.h[s_prime, t])
 
     # Create a solver
-    solver = SolverFactory('gurobi')  # Make sure Gurobi is installed and properly configured
+    solver = SolverFactory('gurobi') 
 
     # Solve the model
     solver.solve(model)

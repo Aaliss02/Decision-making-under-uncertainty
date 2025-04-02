@@ -11,8 +11,6 @@ with open("values.txt", "r") as file:
         values = list(map(float, line.strip().split()))
         theta[t] = values
 
-print(theta)
-
 def sample_exogenous_next_states(lam_t, wind_t, K, data):
     samples = []
     for _ in range(K):
