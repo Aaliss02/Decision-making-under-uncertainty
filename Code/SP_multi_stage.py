@@ -1,6 +1,4 @@
 from data import get_fixed_data
-from WindProcess import wind_model
-from PriceProcess import price_model
 from Clustering import clustering
 from pyomo.environ import *
 from Non_anticipativity import Non_anticipativity
@@ -82,12 +80,6 @@ def make_decision_multi_stage(nb_branches, nb_scen, lookahead, previous_and_curr
         for t in model.T:
             model.Demand.add(model.egrid[s, t] + (problemData['conversion_h2p'] * model.h[s,t]) + wind[s][t] - model.eelzr[s,t] >= demand[t])
 
-    #Constraint on hydrogen conversion
-    model.HydrogenConversion = ConstraintList()
-    for s in model.S:
-        for t in model.T:
-            model.HydrogenConversion.add(model.h[s,t] * problemData['conversion_h2p'] <= problemData['h2p_rate'])
-
     #Constraint on state of electrolyzer
     model.Electrolyzer = ConstraintList()
     for s in model.S:
@@ -151,6 +143,6 @@ def make_decision_multi_stage(nb_branches, nb_scen, lookahead, previous_and_curr
     solver = SolverFactory('gurobi')  # Make sure Gurobi is installed and properly configured
 
     # Solve the model
-    solver.solve(model, tee=False)
+    solver.solve(model)
 
     return value(model.egrid[0, 0]), value(model.eelzr[0, 0]), value(model.h[0, 0]), value(model.on[0, 0]), value(model.off[0, 0])

@@ -1,16 +1,11 @@
 from data import get_fixed_data
 from WindProcess import wind_model
 from PriceProcess import price_model
-from Task0 import optimize
-from Clustering import clustering
-import matplotlib.pyplot as plt
-import numpy as np
 from pyomo.environ import *
 
 def make_decision_two_stage(N, previous_and_current_price, previous_and_current_wind, current_and_next_demand, y1, s1):
 
     problemData = get_fixed_data()
-    n_cluster = 41
 
     #create model
     model = ConcreteModel()
@@ -32,7 +27,7 @@ def make_decision_two_stage(N, previous_and_current_price, previous_and_current_
     
     prob = 1/N
 
-    print("clust", clustering(n_cluster, previous_and_current_wind[1], previous_and_current_wind[0], previous_and_current_price[1], previous_and_current_price[0], problemData))
+    # Clustering was not done in the 2-stage model
     next_wind = [wind_model(previous_and_current_wind[1], previous_and_current_wind[0], problemData) for s in range(N)]
     next_price = [price_model(previous_and_current_price[1], previous_and_current_price[0], next_wind[s], problemData) for s in range(N)]
 
@@ -53,12 +48,6 @@ def make_decision_two_stage(N, previous_and_current_price, previous_and_current_
     model.Demand2 = ConstraintList()
     for s in model.S:
         model.Demand2.add(model.egrid2[s] + (problemData['conversion_h2p'] * model.h2[s]) + next_wind[s] - model.eelzr2[s] >= current_and_next_demand[1])
-
-    #Constraint on hydrogen conversion
-    model.HydrogenConversion1 = Constraint(expr=model.h1 * problemData['conversion_h2p'] <= problemData['h2p_rate'])
-    model.HydrogenConversion2 = ConstraintList()
-    for s in model.S:
-        model.HydrogenConversion2.add(model.h2[s] * problemData['conversion_h2p'] <= problemData['h2p_rate'])
 
     #Constraint on state of electrolyzer
     model.Electrolyzer1 = Constraint(expr=problemData['conversion_p2h'] * model.eelzr1 <= y1 * problemData['p2h_rate'])
@@ -105,6 +94,6 @@ def make_decision_two_stage(N, previous_and_current_price, previous_and_current_
     solver = SolverFactory('gurobi')  # Make sure Gurobi is installed and properly configured
 
     # Solve the model
-    solver.solve(model, tee=True)
+    solver.solve(model)
 
     return model.egrid1, model.eelzr1, model.h1, model.on1, model.off1
