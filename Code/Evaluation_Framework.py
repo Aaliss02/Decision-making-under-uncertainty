@@ -3,16 +3,16 @@ from data import get_fixed_data
 from WindProcess import wind_model
 from PriceProcess import price_model
 from SP_multi_stage import make_decision_multi_stage
-from pyomo.environ import value
 from dummy_policy import make_dummy_decision
 from task3_policy import adp_policy
+from feasibility_check import feasibility_check
 
 problemData = get_fixed_data()
 
-nb_exp = 5
+nb_exp = 20
 nb_timeslots = problemData['num_timeslots']
-nb_scen = 8
-lookahead = 4
+nb_scen = 32
+lookahead = 6
 nb_branches = 2
 
 wind_trajectory = [[0 for _ in range(problemData['num_timeslots'])] for _ in range(nb_exp)]
@@ -53,6 +53,9 @@ for e in range(nb_exp):
             previous_and_current_wind = [wind_trajectory[e][tau - 2], wind_trajectory[e][tau - 1]]
             previous_and_current_price = [price_trajectory[e][tau - 2], price_trajectory[e][tau - 1]]
 
+        ## Multi-stage is used as default, uncomment the other lines to test the other policies
+
+        # Multi-stage 
         (
             egrid[e][tau],
             eelzr[e][tau],
@@ -60,6 +63,30 @@ for e in range(nb_exp):
             on[e][tau],
             off[e][tau],
         ) = make_decision_multi_stage(nb_branches, nb_scen, current_lookahead, previous_and_current_price, previous_and_current_wind, demand, y[e][tau], s[e][tau])
+        """
+        # Expected value
+        (
+            egrid[e][tau],
+            eelzr[e][tau],
+            h[e][tau],
+            on[e][tau],
+            off[e][tau],
+        ) = make_decision_multi_stage(1, 1, current_lookahead, previous_and_current_price, previous_and_current_wind, demand, y[e][tau], s[e][tau])
+
+        # ADP 
+        current_state = (price_trajectory[e][tau-1], wind_trajectory[e][tau-1], y[e][tau], s[e][tau])
+
+        (
+            egrid[e][tau],
+            eelzr[e][tau],
+            h[e][tau],
+            on[e][tau],
+            off[e][tau],
+        ) = adp_policy(current_state, tau, 0.9, 50)"""
+
+        if not feasibility_check(y[e][tau], on[e][tau], off[e][tau], eelzr[e][tau], h[e][tau], egrid[e][tau], s[e][tau], wind_trajectory[e][tau - 1], problemData, demand[0]):
+            print("DECISION DOES NOT MEET THE CONSTRAINTS FOR THIS TIMESLOT. THE DUMMY POLICY WILL BE USED INSTEAD")
+            (egrid[e][tau], eelzr[e][tau], h[e][tau], on[e][tau], off[e][tau]) = make_dummy_decision(demand[0], previous_and_current_wind[1])
 
         policy_cost[e, tau - 1] = price_trajectory[e][tau - 1] * egrid[e][tau] + problemData['electrolyzer_cost'] * y[e][tau]
 

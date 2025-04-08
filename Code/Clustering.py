@@ -1,6 +1,5 @@
 from WindProcess import wind_model
 from PriceProcess import price_model
-import numpy as np
 from sklearn.cluster import KMeans
 
 def clustering(n_clusters, current_wind, previous_wind, current_price, previous_price, problemData):
